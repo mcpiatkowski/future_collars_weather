@@ -2,45 +2,67 @@ import requests
 import json
 import sys
 import datetime
-
-count = 0
-date_exists = False
-
-if len(sys.argv) > 1:
-    date = sys.argv[1][:10]
-else:
-    today = datetime.date.today()
-    tomorrow = today + datetime.timedelta(days=1)
+import credentials
 
 
+def check_weather_in_dict(date_to_check, weather_dict):
+    fall = False
+    date_exists = False
+    for item in range(weather_dict["elblag,pl"]["cnt"]):
+        description = weather_dict["elblag,pl"]["list"][item]['weather'][0]['description']
+        description_time = weather_dict["elblag,pl"]["list"][item]['dt_txt'][:10]
+        if description_time == date_to_check:
+            date_exists = True
+            if 'snow' in description:
+                fall = True
+                return fall, date_exists
+    return fall, date_exists
 
-with open('output.json') as input:
-    weather_dict = json.load(input)
 
-weather_in_elblag = weather_dict["elblag,pl"]["list"]
+def download_new_weather_data():
+    url = "https://community-open-weather-map.p.rapidapi.com/forecast"
 
-for city in weather_dict.keys():
-    print(city)
+    querystring = {"q":"elblag,pl"}
+
+    headers = {
+        'x-rapidapi-key': credentials.rapidapi_key,
+        'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com"
+        }
+
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    return response.json()
 
 
-print("length_list: ", len(weather_dict["elblag,pl"]["list"]))
+def print_forecast(fall, date_exists):
+    if fall:
+        print('Będzie padać.')
+    elif not fall and date_exists:
+        print('Nie będzie padać.')
+    else:
+        print('Nie wiem.')
 
-print(weather_dict["elblag,pl"]["list"][2]['weather'][0]['description'])
 
-for item in range(weather_dict["elblag,pl"]["cnt"]):
-    description = weather_dict["elblag,pl"]["list"][item]['weather'][0]['description']
-    description_time = weather_dict["elblag,pl"]["list"][item]['dt_txt'][:10]
-    if description_time == date:
-        date_exists = True
-        print('Description: {}, Date: {}'.format(description, description_time))
-        if 'snow' in description:
-            count +=1
+def find_date():
+    if len(sys.argv) > 1:
+        date_to_check = sys.argv[1][:10]
+    else:
+        today = datetime.date.today()
+        date_to_check = today + datetime.timedelta(days=1)
+    return str(date_to_check)
 
-print('count: ', count)
+    
+def main():
+    with open('output.json') as input:
+        weather_dict = json.load(input)
+    date_to_check = find_date()
+    fall, date_exists = check_weather_in_dict(date_to_check, weather_dict)
+    if not date_exists:
+        weather_dict["elblag,pl"] = download_new_weather_data()
+        fall, date_exists = check_weather_in_dict(date_to_check, weather_dict)
+        with open('output.json', 'w') as output:
+            output.write(json.dumps(weather_dict))
+    print_forecast(fall, date_exists)
+    
 
-if count > 0:
-    print('Będzie padać.')
-elif count == 0 and date_exists == True:
-    print('Nie będzie padać.')
-else:
-    print('Nie wiem.')
+if __name__ == '__main__':
+    main()
