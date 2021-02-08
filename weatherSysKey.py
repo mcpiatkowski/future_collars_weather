@@ -2,12 +2,11 @@ import requests
 import json
 import sys
 import datetime
-import credentials
 
 
 def find_date():
-    if len(sys.argv) > 1:
-        date_to_check = sys.argv[1][:10]
+    if len(sys.argv) > 2:
+        date_to_check = sys.argv[2][:10]
     else:
         today = datetime.date.today()
         date_to_check = today + datetime.timedelta(days=1)
@@ -28,13 +27,13 @@ def check_weather_in_dict(date_to_check, weather_dict):
     return fall, date_exists
 
 
-def download_new_weather_data():
+def download_new_weather_data(key):
     url = "https://community-open-weather-map.p.rapidapi.com/forecast"
 
     querystring = {"q":"elblag,pl"}
 
     headers = {
-        'x-rapidapi-key': credentials.rapidapi_key,
+        'x-rapidapi-key': key,
         'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com"
         }
 
@@ -52,12 +51,13 @@ def print_forecast(fall, date_exists):
 
     
 def main():
+    key = sys.argv[1]
     with open('output.json') as input:
         weather_dict = json.load(input)
     date_to_check = find_date()
     fall, date_exists = check_weather_in_dict(date_to_check, weather_dict)
     if not date_exists:
-        weather_dict["elblag,pl"] = download_new_weather_data()
+        weather_dict["elblag,pl"] = download_new_weather_data(key)
         fall, date_exists = check_weather_in_dict(date_to_check, weather_dict)
         with open('output.json', 'w') as output:
             output.write(json.dumps(weather_dict))
