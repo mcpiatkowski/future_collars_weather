@@ -2,7 +2,7 @@ import requests
 import json
 import sys
 import datetime
-
+import os
 
 def find_date():
     if len(sys.argv) > 2:
@@ -52,10 +52,13 @@ def print_forecast(fall, date_exists):
     
 def main():
     key = sys.argv[1]
-    with open('output.json') as input:
-        weather_dict = json.load(input)
+    date_exists = False
+    weather_dict = {}
     date_to_check = find_date()
-    fall, date_exists = check_weather_in_dict(date_to_check, weather_dict)
+    if os.path.exists('output.json'):
+        with open('output.json') as input:
+            weather_dict = json.load(input)
+        fall, date_exists = check_weather_in_dict(date_to_check, weather_dict)
     if not date_exists:
         weather_dict["elblag,pl"] = download_new_weather_data(key)
         fall, date_exists = check_weather_in_dict(date_to_check, weather_dict)
